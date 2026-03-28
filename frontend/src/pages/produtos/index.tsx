@@ -1,110 +1,87 @@
-﻿import React from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
-// Componente de card simples (definido no mesmo arquivo)
-const ProdutoCard = ({ product }: any) => {
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
-      <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
-        <img 
-          src={product.image} 
-          alt={product.name}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs px-2 py-1 rounded-full">
-          #{product.rank}
-        </div>
-      </div>
-      
-      <div className="p-4">
-        <h3 className="font-bold text-lg text-gray-900 dark:text-white">{product.name}</h3>
-        <p className="text-sm text-purple-600 mb-2">{product.category}</p>
-        
-        <div className="flex items-center mb-3">
-          <div className="flex text-yellow-400">
-            {'★'.repeat(product.rating)}{'☆'.repeat(5-product.rating)}
-          </div>
-          <span className="text-xs text-gray-500 ml-2">({product.sold})</span>
-        </div>
-        
-        <div className="mb-4">
-          <p className="text-xs text-gray-500 uppercase">Total em comissões</p>
-          <p className="text-2xl font-bold text-green-600">{product.commission}</p>
-        </div>
-        
-        <button className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors">
-          Ver detalhes
-        </button>
-      </div>
-    </div>
-  );
-};
+export default function MeusProdutos() {
+  const { user } = useAuth();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-// Dados dos produtos
-const products = [
-  {
-    id: 1,
-    name: 'GEL VOLUMETRÃO',
-    image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=500',
-    rating: 5,
-    commission: 'R$ 12.10M',
-    rank: 1,
-    sold: 70763,
-    category: 'Beleza'
-  },
-  {
-    id: 2,
-    name: 'JOELHEIRA ORTOPÉDICA',
-    image: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=500',
-    rating: 5,
-    commission: 'R$ 8.45M',
-    rank: 2,
-    sold: 45231,
-    category: 'Saúde'
-  },
-  {
-    id: 3,
-    name: 'CLAREADOR DE MANCHAS',
-    image: 'https://images.unsplash.com/photo-1596703263926-eb0762ee17e4?w=500',
-    rating: 4,
-    commission: 'R$ 6.32M',
-    rank: 3,
-    sold: 38987,
-    category: 'Beleza'
-  },
-  {
-    id: 4,
-    name: 'KIT FACAS PREMIUM',
-    image: 'https://images.pexels.com/photos/5825367/pexels-photo-5825367.jpeg?auto=compress&cs=tinysrgb&w=500',
-    rating: 5,
-    commission: 'R$ 4.89M',
-    rank: 4,
-    sold: 23456,
-    category: 'Casa'
+  useEffect(() => {
+    if (user?.id) {
+      loadProducts();
+    }
+  }, [user]);
+
+  const loadProducts = async () => {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('produtor_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!error) setProducts(data || []);
+    setLoading(false);
+  };
+
+  const toggleStatus = async (id, currentStatus) => {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: !currentStatus })
+      .eq('id', id);
+
+    if (!error) loadProducts();
+  };
+
+  if (!user || user.role !== 'produtor') {
+    return <div className="p-8 text-center">Acesso negado. Área do produtor.</div>;
   }
-];
 
-export default function ProdutosPage() {
   return (
     <>
-      <Head>
-        <title>Produtos - ONVEX</title>
-      </Head>
+      <Head><title>Meus Produtos - ONVEX</title></Head>
 
-      <div className="w-full p-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Todos os Produtos
-        </h1>
-        <p className="text-sm text-gray-500 mb-6">
-          {products.length} produtos disponíveis para afiliação
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map(product => (
-            <ProdutoCard key={product.id} product={product} />
-          ))}
+      <div>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Meus Produtos</h1>
+          <Link href="/produtos/cadastrar" className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+            + Novo Produto
+          </Link>
         </div>
+
+        {loading ? (
+          <div className="text-center py-8">Carregando...</div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-12 bg-gray-800 rounded-xl">
+            <p className="text-gray-400">Você ainda não tem produtos cadastrados.</p>
+            <Link href="/produtos/cadastrar" className="inline-block mt-4 text-purple-500">Cadastrar primeiro produto</Link>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {products.map((product) => (
+              <div key={product.id} className="bg-gray-800 rounded-xl p-4 flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold">{product.name}</h3>
+                  <p className="text-sm text-gray-400">
+                    R$ {product.price} | Estoque: {product.stock} | 
+                    {product.type === 'digital' ? ' Digital (7,99% taxa)' : ' Físico (0% taxa)'}
+                  </p>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => toggleStatus(product.id, product.is_active)}
+                    className={`px-3 py-1 rounded-lg text-sm ${product.is_active ? 'bg-green-600' : 'bg-gray-600'}`}
+                  >
+                    {product.is_active ? 'Ativo' : 'Inativo'}
+                  </button>
+                  <Link href={`/produtos/editar/${product.id}`} className="px-3 py-1 bg-purple-600 rounded-lg text-sm">Editar</Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
