@@ -1,4 +1,4 @@
-@echo off
+ @echo off
 title ONVEX - Iniciando Servidores
 color 0A
 echo ========================================

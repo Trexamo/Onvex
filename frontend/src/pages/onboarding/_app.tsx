@@ -1,21 +1,19 @@
 ﻿import type { AppProps } from 'next/app';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { CartProvider } from '../contexts/CartContext';
 import { useRouter } from 'next/router';
 import { Sidebar } from '../components/layout/Sidebar';
 import { HeaderSuperior } from '../components/layout/HeaderSuperior';
 import '../styles/globals.css';
 import { useEffect } from 'react';
 
-const publicRoutes = ['/', '/auth/login', '/auth/register', '/onboarding', '/termos', '/politica-de-privacidade'];
+const publicRoutes = ['/auth/login', '/auth/register', '/onboarding'];
 
 function AppContent({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const isPublic = publicRoutes.includes(router.pathname);
-  const isLandingPage = router.pathname === '/';
-  const showSidebar = user && user.role && !isPublic && !isLandingPage;
+  const showSidebar = user && user.role && !isPublic;
 
   useEffect(() => {
     if (!loading) {
@@ -25,30 +23,24 @@ function AppContent({ Component, pageProps }: AppProps) {
       if (user && !user.role && router.pathname !== '/onboarding') {
         router.push('/onboarding');
       }
-      if (user && user.role && isLandingPage) {
-        router.push('/dashboard');
+      if (user && user.role && isPublic) {
+        router.push('/');
       }
     }
-  }, [user, loading, router, isPublic, isLandingPage]);
+  }, [user, loading, router, isPublic]);
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white' }}>Carregando...</div>;
-  }
-
-  if (isLandingPage) {
-    return <Component {...pageProps} />;
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
 
   if (!user || !user.role) {
     return <Component {...pageProps} />;
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+    <div className="flex min-h-screen bg-gray-50">
       {showSidebar && <Sidebar />}
       <div className="flex-1 flex flex-col">
         <HeaderSuperior />
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-6">
           <Component {...pageProps} />
         </main>
       </div>
@@ -60,9 +52,7 @@ export default function App(props: AppProps) {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <CartProvider>
-          <AppContent {...props} />
-        </CartProvider>
+        <AppContent {...props} />
       </AuthProvider>
     </ThemeProvider>
   );

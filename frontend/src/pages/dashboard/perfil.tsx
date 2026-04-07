@@ -1,175 +1,178 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faEnvelope, faPhone, faSave, faEdit } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faUser, faEnvelope, faPhone, faIdCard, faCalendar } from '@fortawesome/free-solid-svg-icons';
 
 export default function Perfil() {
+  const { user, refreshUser } = useAuth();
   const [editMode, setEditMode] = useState(false);
-  const [userData, setUserData] = useState({
-    nome: 'João Silva',
-    email: 'joao@onvex.com',
-    telefone: '(11) 99999-9999',
-    documento: '123.456.789-00',
-    dataNascimento: '1990-01-01',
-    endereco: 'Rua das Flores, 123 - São Paulo/SP'
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [formData, setFormData] = useState({
+    nome: '',
+    email: '',
+    telefone: '',
+    cpf: '',
+    data_nascimento: '',
+    rg: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    cep: '',
+    banco: '',
+    agencia: '',
+    conta: '',
+    tipo_conta: 'corrente'
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUserData({ ...userData, [e.target.name]: e.target.value });
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    }
+  }, [user]);
+
+  const loadUserData = async () => {
+    if (!user?.id) return;
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    if (data && !error) {
+      setFormData({
+        nome: data.name || '',
+        email: data.email || '',
+        telefone: data.phone || '',
+        cpf: data.cpf || '',
+        data_nascimento: data.birth_date || '',
+        rg: data.rg || '',
+        endereco: data.address || '',
+        cidade: data.city || '',
+        estado: data.state || '',
+        cep: data.zip_code || '',
+        banco: data.bank || '',
+        agencia: data.bank_agency || '',
+        conta: data.bank_account || '',
+        tipo_conta: data.bank_account_type || 'corrente'
+      });
+    }
   };
 
-  const handleSave = () => {
-    setEditMode(false);
-    alert('Dados salvos com sucesso!');
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        name: formData.nome,
+        phone: formData.telefone,
+        cpf: formData.cpf,
+        birth_date: formData.data_nascimento,
+        rg: formData.rg,
+        address: formData.endereco,
+        city: formData.cidade,
+        state: formData.estado,
+        zip_code: formData.cep,
+        bank: formData.banco,
+        bank_agency: formData.agencia,
+        bank_account: formData.conta,
+        bank_account_type: formData.tipo_conta,
+        updated_at: new Date()
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      setMessage('Erro ao salvar: ' + error.message);
+    } else {
+      setMessage('Dados salvos com sucesso!');
+      setEditMode(false);
+      await refreshUser();
+    }
+    setLoading(false);
+    setTimeout(() => setMessage(''), 3000);
   };
 
   return (
     <>
-      <Head>
-        <title>Meu Perfil - ONVEX</title>
-      </Head>
+      <Head><title>Meu Perfil - ONVEX</title></Head>
 
-      <div className="w-full">
-        <div className="mb-6 flex justify-between items-center">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Meu Perfil</h1>
-            <p className="text-sm text-gray-500">Gerencie suas informações pessoais</p>
+            <h1 className="text-2xl font-bold" style={{ color: '#1a1a2e' }}>Meu Perfil</h1>
+            <p className="text-sm" style={{ color: '#4a5568' }}>Gerencie suas informações pessoais e bancárias</p>
           </div>
           <button
-            onClick={() => editMode ? handleSave() : setEditMode(true)}
+            onClick={() => editMode ? handleSubmit() : setEditMode(true)}
+            disabled={loading}
             className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
           >
             <FontAwesomeIcon icon={editMode ? faSave : faEdit} className="w-4 h-4" />
-            <span>{editMode ? 'Salvar' : 'Editar'}</span>
+            <span>{editMode ? (loading ? 'Salvando...' : 'Salvar') : 'Editar'}</span>
           </button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <div className="flex items-center space-x-4 mb-8 pb-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center text-white text-3xl font-bold shadow-md">
-              {userData.nome.charAt(0)}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">{userData.nome}</h2>
-              <p className="text-gray-500">Afiliado desde 2024</p>
-              <span className="inline-block mt-1 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Conta verificada</span>
+        {message && (
+          <div className={`mb-4 p-3 rounded-lg ${message.includes('sucesso') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {message}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Dados Pessoais */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4 flex items-center space-x-2" style={{ color: '#1a1a2e' }}>
+              <FontAwesomeIcon icon={faUser} className="w-5 h-5 text-purple-500" />
+              <span>Dados Pessoais</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Nome completo *</label><input type="text" name="nome" value={formData.nome} onChange={handleChange} disabled={!editMode} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>E-mail *</label><input type="email" name="email" value={formData.email} disabled className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Telefone *</label><input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} disabled={!editMode} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="(11) 99999-9999" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>CPF *</label><input type="text" name="cpf" value={formData.cpf} onChange={handleChange} disabled={!editMode} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="123.456.789-00" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Data de Nascimento</label><input type="date" name="data_nascimento" value={formData.data_nascimento} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>RG</label><input type="text" name="rg" value={formData.rg} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome completo</label>
-              <input
-                type="text"
-                name="nome"
-                value={userData.nome}
-                onChange={handleChange}
-                disabled={!editMode}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-mail</label>
-              <input
-                type="email"
-                name="email"
-                value={userData.email}
-                onChange={handleChange}
-                disabled={!editMode}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
-              <input
-                type="tel"
-                name="telefone"
-                value={userData.telefone}
-                onChange={handleChange}
-                disabled={!editMode}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CPF/CNPJ</label>
-              <input
-                type="text"
-                name="documento"
-                value={userData.documento}
-                onChange={handleChange}
-                disabled={!editMode}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data de nascimento</label>
-              <input
-                type="date"
-                name="dataNascimento"
-                value={userData.dataNascimento}
-                onChange={handleChange}
-                disabled={!editMode}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
-              <input
-                type="text"
-                name="endereco"
-                value={userData.endereco}
-                onChange={handleChange}
-                disabled={!editMode}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
-              />
+          {/* Endereço */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4 flex items-center space-x-2" style={{ color: '#1a1a2e' }}>
+              <FontAwesomeIcon icon={faPhone} className="w-5 h-5 text-purple-500" />
+              <span>Endereço</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>CEP</label><input type="text" name="cep" value={formData.cep} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Endereço</label><input type="text" name="endereco" value={formData.endereco} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Cidade</label><input type="text" name="cidade" value={formData.cidade} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Estado</label><input type="text" name="estado" value={formData.estado} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
             </div>
           </div>
 
-          <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="font-semibold mb-3">Dados bancários</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banco</label>
-                <input
-                  type="text"
-                  placeholder="Nome do banco"
-                  disabled={!editMode}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:bg-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Agência</label>
-                <input
-                  type="text"
-                  placeholder="0000"
-                  disabled={!editMode}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:bg-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Conta</label>
-                <input
-                  type="text"
-                  placeholder="00000-0"
-                  disabled={!editMode}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:bg-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
-                <select disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:bg-gray-100">
-                  <option>Corrente</option>
-                  <option>Poupança</option>
-                </select>
-              </div>
+          {/* Dados Bancários */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4 flex items-center space-x-2" style={{ color: '#1a1a2e' }}>
+              <FontAwesomeIcon icon={faIdCard} className="w-5 h-5 text-purple-500" />
+              <span>Dados Bancários (para receber comissões)</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Banco</label><input type="text" name="banco" value={formData.banco} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Nome do banco" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Agência</label><input type="text" name="agencia" value={formData.agencia} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="0000" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Conta</label><input type="text" name="conta" value={formData.conta} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="00000-0" /></div>
+              <div><label className="block text-sm mb-1" style={{ color: '#4a5568' }}>Tipo de Conta</label><select name="tipo_conta" value={formData.tipo_conta} onChange={handleChange} disabled={!editMode} className="w-full px-4 py-2 border border-gray-300 rounded-lg"><option value="corrente">Corrente</option><option value="poupanca">Poupança</option></select></div>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </>
   );

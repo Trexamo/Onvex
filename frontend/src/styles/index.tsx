@@ -53,7 +53,7 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Alerta - laranja suave */}
+        {/* Alerta - laranja suave (não amarelo) */}
         <div className="alert-warning">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">

@@ -1,0 +1,76 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TEMA CLARO FIXO - SEM TEMA ESCURO */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f1f3f5;
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a5568;
+  --text-tertiary: #718096;
+  --border-color: #e2e8f0;
+  --card-bg: #ffffff;
+  --hover-bg: #f1f5f9;
+  --primary: #8b5cf6;
+  --primary-dark: #7c3aed;
+  --primary-light: #a78bfa;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --input-bg: #ffffff;
+  --input-text: #1a1a2e;
+  --input-placeholder: #9ca3af;
+  --input-border: #e2e8f0;
+}
+
+/* REMOVER TEMA ESCURO */
+.dark {
+  /* Não usar tema escuro */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+}
+
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.input {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  width: 100%;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
